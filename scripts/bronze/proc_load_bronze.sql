@@ -1,4 +1,25 @@
 /*
+===============================================================================
+Stored Procedure: Load Bronze Layer (Source -> Bronze)
+===============================================================================
+Script Purpose:
+    This stored procedure loads data from external CSV files into the 'bronze' schema. 
+    It performs the following actions:
+    - Truncates the bronze tables before loading data.
+    - Uses the `BULK INSERT` command to load data from CSV files to bronze tables.
+
+Parameters:
+    None. 
+	  This stored procedure does not accept any parameters or return any values.
+
+Usage Example:
+    EXEC bronze.load_bronze;
+===============================================================================
+*/
+
+
+/*
+===============================================================================
 If you’re using Docker for SQL Server on Mac, you need to:
 
 Mount the local folder as a volume when starting the container:
@@ -12,7 +33,7 @@ docker run -d \
   mcr.microsoft.com/mssql/server:2022-latest
 
 -- Reconnect using the 'DataWarehouse' database if needed.
-
+===============================================================================
 */
 CREATE OR ALTER PROCEDURE bronze.load_bronze AS
 BEGIN
