@@ -313,6 +313,7 @@ OR sls_sales <= 0 OR sls_sales IS NULL
 OR sls_price <= 0 OR sls_price IS NULL
 ORDER BY sls_quantity, sls_sales, sls_price;
 
+-- FINAL QUERY
 -- Go and modify silver.crm_sls_details table in silver DDL if needed; 
 -- Chance INT data type to DATE based on the modification we did
 -- INSERT CLEANDED DATA TO SILVER LAYER with FINAL QUERY
@@ -358,3 +359,97 @@ FROM bronze.crm_sales_details
 -- After all go and check all the check condition above for silver.crm_prd_info table to make sure!
 -- You can do that just changing schema name from bronze to silver
 SELECT * FROM silver.crm_sales_details;
+
+
+/*
+===============================================================================
+Quality Check for ERP Tables
+===============================================================================
+*/
+/*
+===============================================================================
+Quality Check for bronze.erp_cust_az12
+===============================================================================
+*/
+SELECT * FROM bronze.erp_cust_az12;
+
+-- Check 1 - Check duplictes and null values of column cid
+-- This column is connected to crm_cust_info table' s cst_key column
+SELECT cid,
+    COUNT(*) AS count
+FROM bronze.erp_cust_az12
+GROUP BY cid
+HAVING COUNT(*)>2 OR cid IS NULL; -- No issues
+
+SELECT cid
+FROM bronze.erp_cust_az12
+WHERE cid != TRIM(cid); -- No issues
+
+-- This column is connected to crm_cust_info table' s cst_key column
+-- We should be able to connect these two tables
+SELECT cst_key FROM silver.crm_cust_info;
+
+SELECT cid,
+    CASE WHEN cid LIKE 'NAS%' THEN SUBSTRING(cid,4,LEN(cid))
+         ELSE cid
+    END AS cid
+FROM bronze.erp_cust_az12
+WHERE CASE WHEN cid LIKE 'NAS%' THEN SUBSTRING(cid,4,LEN(cid))
+         ELSE cid
+    END NOT IN (SELECT cst_key FROM silver.crm_cust_info) -- Check for unmatching cid in cst_key of  silver.crm_cust_info
+
+-- Check 2 - Check bdate column, check if date are in certain range
+SELECT bdate 
+FROM bronze.erp_cust_az12
+WHERE bdate < '1924-01-01' OR bdate > GETDATE(); -- check very old custumers, We have dates with future dates
+
+-- Convert future dates to NULL
+SELECT
+CASE WHEN bdate > GETDATE() THEN NULL
+      ELSE bdate 
+END AS bdate
+FROM bronze.erp_cust_az12
+--ORDER BY bdate ASC;
+
+-- Check 2 - Check gen column, we have abbreviation and desciriptive form with and without empty spacces. 
+-- Make them consistent and descriptive, remove spaces 
+
+SELECT DISTINCT gen
+FROM bronze.erp_cust_az12;
+
+SELECT DISTINCT TRIM(REPLACE(gen, CHAR(13),'')),LEN(gen)
+FROM bronze.erp_cust_az12;
+
+SELECT DISTINCT gen,
+    CASE 
+        WHEN UPPER(TRIM(REPLACE(gen, CHAR(13),''))) IN ('M', 'MALE') THEN 'Male'
+        WHEN UPPER(TRIM(REPLACE(gen, CHAR(13),''))) IN ('F', 'FEMALE') THEN 'Female'
+        ELSE 'n/a'
+    END AS gen
+FROM bronze.erp_cust_az12
+
+-- FINAL QUERY
+-- Go and modify silver.erp_cust_az12 table in silver DDL if needed; 
+-- INSERT CLEANDED DATA TO SILVER LAYER with FINAL QUERY
+INSERT INTO silver.erp_cust_az12(
+    cid,
+    bdate,
+    gen
+)
+SELECT
+    CASE WHEN cid LIKE 'NAS%' THEN SUBSTRING(cid,4,LEN(cid))
+         ELSE cid
+    END AS cid,
+    CASE WHEN bdate > GETDATE() THEN NULL
+      ELSE bdate 
+    END AS bdate,
+        CASE 
+        WHEN UPPER(TRIM(REPLACE(gen, CHAR(13),''))) IN ('M', 'MALE') THEN 'Male'
+        WHEN UPPER(TRIM(REPLACE(gen, CHAR(13),''))) IN ('F', 'FEMALE') THEN 'Female'
+        ELSE 'n/a'
+    END AS gen
+FROM bronze.erp_cust_az12
+
+-- After all go and check all the check condition above for silver.erp_cust_az12 table to make sure!
+-- You can do that just changing schema name from bronze to silver
+SELECT * FROM silver.erp_cust_az12;
