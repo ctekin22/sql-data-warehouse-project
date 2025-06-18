@@ -61,7 +61,7 @@ BEGIN
             ROW_NUMBER() OVER(PARTITION BY cst_id ORDER BY cst_create_date DESC) AS rank
             FROM bronze.crm_cust_info
             WHERE cst_id IS NOT NULL
-            )t WHERE rank = 1 OR cst_id IS NOT NULL;
+            )t WHERE rank = 1;
     SET @end_time = GETDATE();
     PRINT '>> silver.crm_cust_info LODING TIME IS ' + CAST(DATEDIFF(second, @end_time, @start_time) AS NVARCHAR) + ' seconds';
 
