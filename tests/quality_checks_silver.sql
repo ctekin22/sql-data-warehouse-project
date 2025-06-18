@@ -93,7 +93,8 @@ SELECT DISTINCT cst_gndr FROM bronze.crm_cust_info;
 --   After that, go and repeat the steps above changing scheme name from bronze to silver 
 --   to check quality of the silver.crm_cust_info table one more time.
 --   After all, insert data to silver layet's crm_cust_info table
-
+TRUNCATE TABLE silver.crm_cust_info;
+PRINT '>> INserting Data Into: silver.crm_cust_info'
 INSERT INTO silver.crm_cust_info (
     cst_id,
     cst_key,
@@ -207,6 +208,8 @@ WHERE prd_key IN ('AC-HE-HL-U509-R', 'AC-HE-HL-U509');
 -- Go and modify silver.crm_prd_info table in silver DDL if needed; 
 -- Add cat_id and chance DATETIME data type to DATE based on the modification we did
 -- INSERT CLEANDED DATA TO SILVER LAYER with FINAL QUERY 
+TRUNCATE TABLE silver.crm_prd_info;
+PRINT '>> INserting Data Into: silver.crm_prd_info'
 INSERT INTO silver.crm_prd_info(
     prd_id,
     cat_id,
@@ -317,6 +320,8 @@ ORDER BY sls_quantity, sls_sales, sls_price;
 -- Go and modify silver.crm_sls_details table in silver DDL if needed; 
 -- Chance INT data type to DATE based on the modification we did
 -- INSERT CLEANDED DATA TO SILVER LAYER with FINAL QUERY
+TRUNCATE TABLE silver.crm_sales_details;
+PRINT '>> INserting Data Into: silver.crm_sales_details'
 INSERT INTO silver.crm_sales_details
 (
     sls_ord_num, 
@@ -431,6 +436,8 @@ FROM bronze.erp_cust_az12
 -- FINAL QUERY
 -- Go and modify silver.erp_cust_az12 table in silver DDL if needed; 
 -- INSERT CLEANDED DATA TO SILVER LAYER with FINAL QUERY
+TRUNCATE TABLE silver.erp_cust_az12;
+PRINT '>> INserting Data Into: silver.erp_cust_az12'
 INSERT INTO silver.erp_cust_az12(
     cid,
     bdate,
@@ -487,6 +494,8 @@ ORDER BY cntry;
 -- FINAL QUERY
 -- Go and modify silver.erp_loc_a101 table in silver DDL if needed; 
 -- INSERT CLEANDED DATA TO SILVER LAYER with FINAL QUERY
+TRUNCATE TABLE silver.erp_loc_a101;
+PRINT '>> INserting Data Into: silver.erp_loc_a101'
 INSERT INTO silver.erp_loc_a101(
     cid,
     cntry
@@ -504,3 +513,64 @@ FROM bronze.erp_loc_a101
 -- After all go and check all the check condition above for silver.erp_loc_a101 table to make sure!
 -- You can do that just changing schema name from bronze to silver
 SELECT * FROM silver.erp_loc_a101;
+
+/*
+===============================================================================
+Quality Check for bronze.erp_px_cat_g1v2
+===============================================================================
+*/
+
+SELECT * FROM bronze.erp_px_cat_g1v2;
+
+-- Check 1 - Check the quality of the id column
+SELECT id 
+FROM bronze.erp_px_cat_g1v2
+
+
+-- This column is connected to crm_prd_info table' s prd_key column
+-- This information must be matching in order to join tables
+-- We alredy did this part seperating prd_key to cat_id
+SELECT * FROM silver.crm_prd_info;
+
+-- Check 2 - Check the quality of the cat and subcat columns, unwanted spaces
+SELECT DISTINCT cat 
+FROM bronze.erp_px_cat_g1v2 --OK 
+
+SELECT DISTINCT subcat 
+FROM bronze.erp_px_cat_g1v2 --OK 
+
+SELECT cat 
+FROM bronze.erp_px_cat_g1v2
+WHERE cat != TRIM(cat) OR subcat != TRIM(subcat) OR maintance != TRIM(maintance); -- No issues
+
+-- Check 3 - Check for maintance column
+-- Data Standartization and Normalization
+SELECT DISTINCT maintance,
+    TRIM(REPLACE(maintance, CHAR(13),'')) 
+FROM bronze.erp_px_cat_g1v2;
+
+SELECT DISTINCT 
+    TRIM(REPLACE(maintance, CHAR(13),'')) as maintance
+FROM bronze.erp_px_cat_g1v2;
+
+-- FINAL QUERY
+-- Go and modify silver.erp_px_cat_g1v2 table in silver DDL if needed; 
+-- INSERT CLEANDED DATA TO SILVER LAYER with FINAL QUERY
+TRUNCATE TABLE silver.erp_px_cat_g1v2;
+PRINT '>> INserting Data Into: silver.erp_px_cat_g1v2'
+INSERT INTO silver.erp_px_cat_g1v2(
+    id,
+    cat,
+    subcat,
+    maintance
+)
+SELECT 
+id,
+cat,
+subcat,
+TRIM(REPLACE(maintance, CHAR(13),'')) AS maintance
+FROM bronze.erp_px_cat_g1v2;
+
+-- After all go and check all the check condition above for silver.erp_px_cat_g1v2 table to make sure!
+-- You can do that just changing schema name from bronze to silver
+SELECT * FROM silver.erp_px_cat_g1v2;
