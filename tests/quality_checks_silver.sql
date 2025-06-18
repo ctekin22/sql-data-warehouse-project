@@ -453,3 +453,54 @@ FROM bronze.erp_cust_az12
 -- After all go and check all the check condition above for silver.erp_cust_az12 table to make sure!
 -- You can do that just changing schema name from bronze to silver
 SELECT * FROM silver.erp_cust_az12;
+
+/*
+===============================================================================
+Quality Check for bronze.erp_loc_a101
+===============================================================================
+*/
+
+SELECT * FROM bronze.erp_loc_a101;
+
+-- Check 1 - Check duplictes and null values of column cid
+-- This column is connected to crm_cust_info table' s cst_key column
+-- This information must be matching in order to join tables, remove - 
+SELECT 
+    REPLACE(cid,'-', '') AS cid
+FROM bronze.erp_loc_a101
+WHERE  REPLACE(cid,'-', '') NOT IN (SELECT cst_key FROM silver.crm_cust_info); -- Check if colums matching now
+
+SELECT cst_key FROM silver.crm_cust_info;
+
+-- Check 2 - Check cntry column
+-- Data Standartizatin and Consistency
+SELECT DISTINCT cntry,
+    CASE 
+        WHEN UPPER(TRIM(REPLACE(cntry, CHAR(13),''))) IN ('USA', 'US') THEN 'United States'
+        WHEN UPPER(TRIM(REPLACE(cntry, CHAR(13),''))) ='DE' THEN 'Germany'
+        WHEN UPPER(TRIM(REPLACE(cntry, CHAR(13),''))) IS NOT NULL THEN TRIM(REPLACE(cntry, CHAR(13),''))
+        ELSE 'n/a' 
+    END AS cntry2
+FROM bronze.erp_loc_a101
+ORDER BY cntry;
+
+-- FINAL QUERY
+-- Go and modify silver.erp_loc_a101 table in silver DDL if needed; 
+-- INSERT CLEANDED DATA TO SILVER LAYER with FINAL QUERY
+INSERT INTO silver.erp_loc_a101(
+    cid,
+    cntry
+)
+SELECT 
+    REPLACE(cid,'-', '') AS cid,
+    CASE 
+        WHEN UPPER(TRIM(REPLACE(cntry, CHAR(13),''))) IN ('USA', 'US') THEN 'United States'
+        WHEN UPPER(TRIM(REPLACE(cntry, CHAR(13),''))) ='DE' THEN 'Germany'
+        WHEN UPPER(TRIM(REPLACE(cntry, CHAR(13),''))) IS NOT NULL THEN TRIM(REPLACE(cntry, CHAR(13),''))
+        ELSE 'n/a' 
+    END AS cntry
+FROM bronze.erp_loc_a101
+
+-- After all go and check all the check condition above for silver.erp_loc_a101 table to make sure!
+-- You can do that just changing schema name from bronze to silver
+SELECT * FROM silver.erp_loc_a101;
