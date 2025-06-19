@@ -130,3 +130,43 @@ CREATE VIEW gold.dim_product AS
     FROM silver.crm_prd_info pi
     LEFT JOIN silver.erp_px_cat_g1v2 cat ON pi.cat_id = cat.id
     WHERE pi.prd_end_dt IS NULL
+
+
+PRINT '----------------------------------------------------------------------------------------------------------'
+PRINT 'Creating Sales Fact Table, using master table silver.crm_sales_details'
+PRINT '----------------------------------------------------------------------------------------------------------'
+-- Dimensions vs Fact? It includes measurable sales information -- Fact
+-- Measures: sales, quantity, price
+-- It also has keys for the product and customer tables: sls_prd_key and sls_cust_id. These are original id
+-- As you remember, we also generated primary keys for each of these tables while creating their views. 
+-- Replace these original keys with the surrogate keys we generated.
+-- We will use original keys to join the fact table with the dimension table to get surrogate keys -- Data Lookup
+-- We will use these dimension keys to connect the component of the data model; dimension tables/views and fact table/view.
+-- After all, rename the columns to friendly, meaningful names.
+-- Sort the columns into logical groups to improve readability: keys, dates, and measurables.
+-- Apply a quality check after it is done
+
+CREATE VIEW gold.fact_sales AS 
+    SELECT
+        sa.sls_ord_num AS order_number,
+        pc.product_key,
+        dc.customer_key,
+        sa.sls_order_dt AS order_date,
+        sa.sls_ship_dt AS shipping_date,
+        sa.sls_due_dt AS due_date,
+        sa.sls_sales AS sales,
+        sa.sls_quantity AS quantity,
+        sa.sls_price AS price
+    FROM silver.crm_sales_details sa 
+    LEFT JOIN gold.dim_customer dc ON sa.sls_cust_id = dc.customer_id 
+    LEFT JOIN gold.dim_product pc ON sa.sls_prd_key = pc.product_number;
+
+-- Check if all dimension tables can successfully join to the fact table
+-- Foreign Key Integrity (Dimensions)
+
+SELECT *
+FROM gold.fact_sales fs 
+LEFT JOIN gold.dim_customer dc ON  fs.customer_key = dc.customer_key
+LEFT JOIN gold.dim_product dp ON fs.product_key = dp.product_key
+WHERE dc.customer_key IS NULL OR dp.product_key IS NULL -- Should be empty if everything is matching
+-- WHERE dp.product_key IS NULL  -- Should be empty if everything is matching
